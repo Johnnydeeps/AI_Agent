@@ -21,6 +21,9 @@ def main():
     parser.add_argument(
         "user_prompt", type=str, help="User Prompt"
     )  # expect one argument called "user_prompt" which is a string
+
+    # adding --verbose argument input
+    parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
     args = parser.parse_args()  # read user input string from CLI
 
     # Creating list/ conversation history
@@ -35,8 +38,11 @@ def main():
     if response.usage_metadata is None:
         raise RuntimeError("Gemini Api response metadata missing or malformed")
 
-    print(f"Prompt tokens: {response.usage_metadata.prompt_token_count}")
-    print(f"Response tokens: {response.usage_metadata.candidates_token_count}")
+    # changed print structure to reflect the addition of the --verbose flag in user_input
+    if args.verbose:
+        print(f"User prompt: {args.user_prompt}")
+        print(f"Prompt tokens: {response.usage_metadata.prompt_token_count}")
+        print(f"Response tokens: {response.usage_metadata.candidates_token_count}")
     print("Response:")
     print(f"{response.text}")
 
