@@ -1,0 +1,35 @@
+import os
+
+
+def get_files_info(working_directory, directory="."):
+    try:
+        working_dir_abs = os.path.abspath(working_directory)  # sandbox directory
+        target_dir = os.path.normpath(
+            os.path.join(working_dir_abs, directory)
+        )  # making a string for any sub directories that the AI can look at
+
+        valid_target_dir = (
+            os.path.commonpath([working_dir_abs, target_dir]) == working_dir_abs
+        )  # comparison statement asking if the most common path between the target directory and
+        # sandbox box directory are the same, raise in If check below.
+
+        if not valid_target_dir:
+            return f'Error: Cannot list "{directory}" as it is outside the permitted working directory'
+
+        if not os.path.isdir(target_dir):
+            return f'Error: "{directory}" is not a directory'
+            # second if check to make sure that the AI is looking in a directory not a file
+
+        lines = []
+        for item in os.listdir(target_dir):
+            item_path = os.path.join(target_dir, item)
+            item_size = os.path.getsize(item_path)
+            is_directory = os.path.isdir(item_path)
+
+            line = f"- {item}: file_size={item_size} bytes, is_dir={is_directory}"
+            lines.append(line)
+        output = "\n".join(lines)
+        return output
+
+    except Exception as e:
+        return f"Error: {e}"
