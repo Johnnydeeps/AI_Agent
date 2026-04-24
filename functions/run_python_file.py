@@ -1,6 +1,8 @@
 import os
 import subprocess
 
+from google.genai import types
+
 
 def run_python_file(working_directory, file_path, args=None):
     try:
@@ -45,3 +47,25 @@ def run_python_file(working_directory, file_path, args=None):
 
     except Exception as e:
         return f"Error: executing Python file: {e}"
+
+
+# AI input description for get_files_info function. AI CAN READ THIS. THIS IS STATIC.
+schema_run_python_file = types.FunctionDeclaration(
+    name="run_python_file",
+    description="Executes a python file '.py' in a specified directory relative to the working directory, providing captured outputs of the file including stdout and stderr",
+    parameters=types.Schema(
+        type=types.Type.OBJECT,
+        required=["file_path"],
+        properties={
+            "file_path": types.Schema(
+                type=types.Type.STRING,
+                description="The path to the file to execute, relative to the working directory.",
+            ),
+            "args": types.Schema(
+                type=types.Type.ARRAY,
+                description="Additional arguments that can be passed from the CLI ie. --verbose output for additional information",
+                items=types.Schema(type=types.Type.STRING),
+            ),
+        },
+    ),
+)

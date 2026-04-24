@@ -1,5 +1,7 @@
 import os
 
+from google.genai import types
+
 from config import MAX_CHARS
 
 
@@ -27,3 +29,20 @@ def get_file_content(working_directory, file_path):
             return file_content_string
     except Exception as e:
         return f"Error reading file: {e}"
+
+
+# AI input description for get_files_info function. AI CAN READ THIS. THIS IS STATIC.
+schema_get_file_content = types.FunctionDeclaration(
+    name="get_file_content",
+    description="Reads the content of a file in a specified directory relative to the working directory, providing file contents with a maxiumum character count of 10000",
+    parameters=types.Schema(
+        type=types.Type.OBJECT,
+        required=["file_path"],
+        properties={
+            "file_path": types.Schema(
+                type=types.Type.STRING,
+                description="The path to the file to read, relative to the working directory.",
+            ),
+        },
+    ),
+)
