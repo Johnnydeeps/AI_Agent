@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 
-from call_function import available_functions
+from call_function import available_functions, call_function
 from prompts import system_prompt
 
 
@@ -53,10 +53,21 @@ def main():
 
     # check to see if AI 'response' contains function calls.
     if response.function_calls:
+        function_responses = []
         for response_returned_arg in response.function_calls:
-            print(
-                f"Calling function: {response_returned_arg.name}({response_returned_arg.args})"
-            )
+            function_call_result = call_function(response_returned_arg, args.verbose)
+            if (
+                not function_call_result.parts
+                or not function_call_result.parts[0].function_response
+                or not function_call_result.parts[0].function_response.response
+            ):
+                raise RuntimeError(
+                    f"Empty function response for {response_returned_arg.name}"
+                )
+            if args.verbose:
+                print(f"-> {function_call_result.parts[0].function_response.response}")
+
+            function_responses.append(function_call_result.parts[0])
     else:
         print("Response:")
         print(f"{response.text}")
