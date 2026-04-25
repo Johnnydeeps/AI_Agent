@@ -1,5 +1,6 @@
 import argparse
 import os
+import sys
 
 from dotenv import load_dotenv
 from google import genai
@@ -34,43 +35,61 @@ def main():
 
     # Main AI access/config code block
     client = genai.Client(api_key=api_key)
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=messages,
-        config=types.GenerateContentConfig(
-            tools=[available_functions], system_instruction=system_prompt
-        ),
-    )
+    for _ in range(20):
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=messages,
+            config=types.GenerateContentConfig(
+                tools=[available_functions], system_instruction=system_prompt
+            ),
+        )
 
-    if response.usage_metadata is None:
-        raise RuntimeError("Gemini Api response metadata missing or malformed")
+        if response.usage_metadata is None:
+            raise RuntimeError("Gemini Api response metadata missing or malformed")
 
-    # changed print structure to reflect the addition of the --verbose flag in user_input
-    if args.verbose:
-        print(f"User prompt: {args.user_prompt}")
-        print(f"Prompt tokens: {response.usage_metadata.prompt_token_count}")
-        print(f"Response tokens: {response.usage_metadata.candidates_token_count}")
+        # changed print structure to reflect the addition of the --verbose flag in user_input
+        if args.verbose:
+            print(f"User prompt: {args.user_prompt}")
+            print(f"Prompt tokens: {response.usage_metadata.prompt_token_count}")
+            print(f"Response tokens: {response.usage_metadata.candidates_token_count}")
 
-    # check to see if AI 'response' contains function calls.
-    if response.function_calls:
-        function_responses = []
-        for response_returned_arg in response.function_calls:
-            function_call_result = call_function(response_returned_arg, args.verbose)
-            if (
-                not function_call_result.parts
-                or not function_call_result.parts[0].function_response
-                or not function_call_result.parts[0].function_response.response
-            ):
-                raise RuntimeError(
-                    f"Empty function response for {response_returned_arg.name}"
+        # response.candidates is a list of the model's possible replies (almost always just one).
+        #  Each candidate has a .content (a types.Content object). We append each candidate's
+        # .content to messages so the model remembers what it said on the next iteration.
+        if response.candidates:
+            for candidate in response.candidates:
+                if candidate.content:
+                    messages.append(candidate.content)
+
+        # check to see if AI 'response' contains function calls.
+        if response.function_calls:
+            function_responses = []
+            for response_returned_arg in response.function_calls:
+                function_call_result = call_function(
+                    response_returned_arg, args.verbose
                 )
-            if args.verbose:
-                print(f"-> {function_call_result.parts[0].function_response.response}")
+                if (
+                    not function_call_result.parts
+                    or not function_call_result.parts[0].function_response
+                    or not function_call_result.parts[0].function_response.response
+                ):
+                    raise RuntimeError(
+                        f"Empty function response for {response_returned_arg.name}"
+                    )
+                if args.verbose:
+                    print(
+                        f"-> {function_call_result.parts[0].function_response.response}"
+                    )
+                function_responses.append(function_call_result.parts[0])
 
-            function_responses.append(function_call_result.parts[0])
-    else:
-        print("Response:")
-        print(f"{response.text}")
+            messages.append(types.Content(role="user", parts=function_responses))
+        else:
+            print("Response:")
+            print(f"{response.text}")
+            return
+
+    print("Maximum iterations reached without final response")
+    sys.exit(1)
 
 
 if __name__ == "__main__":
